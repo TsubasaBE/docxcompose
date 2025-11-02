@@ -15,8 +15,21 @@ from lxml.etree import FunctionNamespace
 from lxml.etree import QName
 from six import binary_type
 from six import text_type
-import pkg_resources
 import re
+import sys
+
+# Use importlib.resources for Python 3.9+, fallback to importlib_resources for older versions
+if sys.version_info >= (3, 9):
+    from importlib.resources import files
+    USE_IMPORTLIB_RESOURCES = True
+else:
+    try:
+        from importlib_resources import files
+        USE_IMPORTLIB_RESOURCES = True
+    except ImportError:
+        # Fallback to pkg_resources if importlib_resources is not available
+        import pkg_resources
+        USE_IMPORTLIB_RESOURCES = False
 
 
 CUSTOM_PROPERTY_FMTID = '{D5CDD505-2E9C-101B-9397-08002B2CF9AE}'
@@ -108,8 +121,15 @@ class CustomProperties(object):
             self._element = parse_xml(part.blob)
 
     def _part_template(self):
-        return pkg_resources.resource_string(
-            'docxcompose', 'templates/custom.xml')
+        if USE_IMPORTLIB_RESOURCES:
+            # Modern approach using importlib.resources
+            template_file = files('docxcompose').joinpath('templates/custom.xml')
+            return template_file.read_bytes()
+        else:
+            # Fallback to pkg_resources for older Python versions
+            import pkg_resources
+            return pkg_resources.resource_string(
+                'docxcompose', 'templates/custom.xml')
 
     def _update_part(self):
         if self.part is None:
